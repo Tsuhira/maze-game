@@ -5,12 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>MAZE // TILT</title>
   <style>
-    /* ========== RESET & BASE ========== */
-    *, *::before, *::after {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
       --neon-cyan:    #00f5ff;
@@ -21,350 +16,167 @@
       --bg-panel:     #0d0d20;
       --border-glow:  #1a1a3e;
       --text-dim:     #4a4a7a;
-      --wall-color:   #1e3a5f;
-      --wall-glow:    #00f5ff33;
     }
 
     html, body {
-      width: 100%;
-      height: 100%;
+      width: 100%; height: 100%;
       overflow: hidden;
       background: var(--bg-dark);
       color: var(--neon-cyan);
       font-family: 'Courier New', Courier, monospace;
     }
 
-    /* ========== SCANLINE EFFECT ========== */
     body::after {
       content: '';
-      position: fixed;
-      inset: 0;
-      background: repeating-linear-gradient(
-        0deg,
-        transparent,
-        transparent 2px,
-        rgba(0, 0, 0, 0.08) 2px,
-        rgba(0, 0, 0, 0.08) 4px
-      );
-      pointer-events: none;
-      z-index: 9999;
+      position: fixed; inset: 0;
+      background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.08) 2px, rgba(0,0,0,0.08) 4px);
+      pointer-events: none; z-index: 9999;
     }
 
-    /* ========== MAIN LAYOUT ========== */
     #app {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      width: 100%;
-      height: 100%;
-      padding: 8px;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      width: 100%; height: 100%; padding: 8px;
     }
 
-    /* ========== HUD ========== */
     #hud {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      width: 100%;
-      max-width: 400px;
-      padding: 6px 12px;
-      margin-bottom: 6px;
+      display: flex; justify-content: space-between; align-items: center;
+      width: 100%; max-width: 400px;
+      padding: 6px 12px; margin-bottom: 6px;
       background: var(--bg-panel);
-      border: 1px solid var(--border-glow);
-      border-bottom: none;
+      border: 1px solid var(--border-glow); border-bottom: none;
       border-radius: 4px 4px 0 0;
-      position: relative;
-      overflow: hidden;
+      position: relative; overflow: hidden;
     }
 
     #hud::before {
-      content: '';
-      position: absolute;
-      inset: 0;
+      content: ''; position: absolute; inset: 0;
       background: linear-gradient(90deg, transparent, rgba(0,245,255,0.03), transparent);
     }
 
-    .hud-item {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 1px;
-    }
-
-    .hud-label {
-      font-size: 9px;
-      letter-spacing: 2px;
-      color: var(--text-dim);
-      text-transform: uppercase;
-    }
-
-    .hud-value {
-      font-size: 18px;
-      font-weight: bold;
-      letter-spacing: 1px;
-      text-shadow: 0 0 8px currentColor;
-    }
-
+    .hud-item { display: flex; flex-direction: column; align-items: center; gap: 1px; }
+    .hud-label { font-size: 9px; letter-spacing: 2px; color: var(--text-dim); text-transform: uppercase; }
+    .hud-value { font-size: 18px; font-weight: bold; letter-spacing: 1px; text-shadow: 0 0 8px currentColor; }
     #scoreDisplay  { color: var(--neon-yellow); }
-    #timerDisplay  { color: var(--neon-cyan);   font-size: 22px; }
+    #timerDisplay  { color: var(--neon-cyan); font-size: 22px; }
     #stageDisplay  { color: var(--neon-magenta); }
 
-    /* ========== CANVAS WRAPPER ========== */
     #canvasWrapper {
-      position: relative;
-      width: 100%;
-      max-width: 400px;
+      position: relative; width: 100%; max-width: 400px;
       aspect-ratio: 1 / 1;
       border: 1px solid var(--neon-cyan);
-      box-shadow:
-        0 0 10px var(--neon-cyan),
-        0 0 30px rgba(0,245,255,0.2),
-        inset 0 0 20px rgba(0,245,255,0.05);
-      border-radius: 0 0 4px 4px;
-      overflow: hidden;
+      box-shadow: 0 0 10px var(--neon-cyan), 0 0 30px rgba(0,245,255,0.2), inset 0 0 20px rgba(0,245,255,0.05);
+      border-radius: 0 0 4px 4px; overflow: hidden;
       background: var(--bg-dark);
     }
 
-    #mazeCanvas {
-      display: block;
-      width: 100%;
-      height: 100%;
-    }
+    #mazeCanvas { display: block; width: 100%; height: 100%; }
 
-    /* ========== STAGE INFO BAR ========== */
+    #canvasWrapper::before, #canvasWrapper::after {
+      content: ''; position: absolute;
+      width: 12px; height: 12px;
+      border-color: var(--neon-cyan); border-style: solid;
+      z-index: 2; pointer-events: none;
+    }
+    #canvasWrapper::before { top: 0; left: 0; border-width: 2px 0 0 2px; }
+    #canvasWrapper::after  { bottom: 0; right: 0; border-width: 0 2px 2px 0; }
+
     #stageInfo {
-      width: 100%;
-      max-width: 400px;
-      margin-top: 6px;
+      width: 100%; max-width: 400px; margin-top: 6px;
       padding: 4px 12px;
-      background: var(--bg-panel);
-      border: 1px solid var(--border-glow);
-      border-radius: 4px;
-      font-size: 10px;
-      letter-spacing: 2px;
-      color: var(--text-dim);
-      text-align: center;
-      text-transform: uppercase;
+      background: var(--bg-panel); border: 1px solid var(--border-glow); border-radius: 4px;
+      font-size: 10px; letter-spacing: 2px; color: var(--text-dim);
+      text-align: center; text-transform: uppercase;
     }
+    #stageInfo span { color: var(--neon-green); text-shadow: 0 0 6px var(--neon-green); }
 
-    #stageInfo span {
-      color: var(--neon-green);
-      text-shadow: 0 0 6px var(--neon-green);
-    }
-
-    /* ========== OVERLAY BASE ========== */
     .overlay {
-      position: fixed;
-      inset: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
+      position: fixed; inset: 0;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
       gap: 20px;
-      background: rgba(10, 10, 20, 0.92);
-      backdrop-filter: blur(4px);
-      z-index: 100;
-      padding: 24px;
-      text-align: center;
+      background: rgba(10,10,20,0.92); backdrop-filter: blur(4px);
+      z-index: 100; padding: 24px; text-align: center;
     }
-
-    .overlay.hidden {
-      display: none;
-    }
-
-    /* ========== START SCREEN ========== */
-    #startScreen {
-      background: rgba(10, 10, 20, 0.95);
-    }
+    .overlay.hidden { display: none; }
 
     .game-logo {
-      font-size: 48px;
-      font-weight: bold;
-      letter-spacing: 8px;
+      font-size: 48px; font-weight: bold; letter-spacing: 8px;
       color: var(--neon-cyan);
-      text-shadow:
-        0 0 10px var(--neon-cyan),
-        0 0 30px var(--neon-cyan),
-        0 0 60px rgba(0,245,255,0.5);
+      text-shadow: 0 0 10px var(--neon-cyan), 0 0 30px var(--neon-cyan), 0 0 60px rgba(0,245,255,0.5);
       animation: flicker 4s infinite;
     }
-
     .game-subtitle {
-      font-size: 13px;
-      letter-spacing: 4px;
-      color: var(--neon-magenta);
-      text-shadow: 0 0 8px var(--neon-magenta);
+      font-size: 13px; letter-spacing: 4px;
+      color: var(--neon-magenta); text-shadow: 0 0 8px var(--neon-magenta);
       margin-top: -8px;
     }
-
     .divider {
-      width: 200px;
-      height: 1px;
+      width: 200px; height: 1px;
       background: linear-gradient(90deg, transparent, var(--neon-cyan), transparent);
     }
-
-    .instructions {
-      font-size: 12px;
-      line-height: 2;
-      color: var(--text-dim);
-      letter-spacing: 1px;
-    }
-
-    .instructions span {
-      color: var(--neon-green);
-    }
-
-    /* ========== GOAL SCREEN ========== */
-    #goalScreen {
-      background: rgba(10, 20, 10, 0.95);
-    }
+    .instructions { font-size: 12px; line-height: 2; color: var(--text-dim); letter-spacing: 1px; }
+    .instructions span { color: var(--neon-green); }
 
     .goal-title {
-      font-size: 36px;
-      font-weight: bold;
-      letter-spacing: 6px;
+      font-size: 36px; font-weight: bold; letter-spacing: 6px;
       color: var(--neon-green);
-      text-shadow:
-        0 0 10px var(--neon-green),
-        0 0 30px var(--neon-green),
-        0 0 60px rgba(0,255,136,0.5);
+      text-shadow: 0 0 10px var(--neon-green), 0 0 30px var(--neon-green), 0 0 60px rgba(0,255,136,0.5);
       animation: pulse-glow 1s ease-in-out infinite alternate;
     }
-
     .goal-stats {
-      display: flex;
-      gap: 32px;
-      padding: 16px 24px;
-      border: 1px solid var(--neon-green);
-      border-radius: 4px;
+      display: flex; gap: 32px; padding: 16px 24px;
+      border: 1px solid var(--neon-green); border-radius: 4px;
       box-shadow: 0 0 12px rgba(0,255,136,0.2);
     }
-
-    .goal-stat {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 4px;
-    }
-
-    .goal-stat-label {
-      font-size: 9px;
-      letter-spacing: 2px;
-      color: var(--text-dim);
-      text-transform: uppercase;
-    }
-
-    .goal-stat-value {
-      font-size: 24px;
-      font-weight: bold;
-      text-shadow: 0 0 8px currentColor;
-    }
-
+    .goal-stat { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+    .goal-stat-label { font-size: 9px; letter-spacing: 2px; color: var(--text-dim); text-transform: uppercase; }
+    .goal-stat-value { font-size: 24px; font-weight: bold; text-shadow: 0 0 8px currentColor; }
     #goalTimeValue  { color: var(--neon-cyan); }
+    #goalStageValue { color: var(--neon-magenta); }
     #goalScoreValue { color: var(--neon-yellow); }
 
-    /* ========== BUTTONS ========== */
     .btn {
       padding: 12px 32px;
       font-family: 'Courier New', Courier, monospace;
-      font-size: 14px;
-      font-weight: bold;
-      letter-spacing: 4px;
-      text-transform: uppercase;
-      border: 2px solid;
-      border-radius: 2px;
-      background: transparent;
-      cursor: pointer;
-      position: relative;
-      overflow: hidden;
+      font-size: 14px; font-weight: bold; letter-spacing: 4px; text-transform: uppercase;
+      border: 2px solid; border-radius: 2px;
+      background: transparent; cursor: pointer;
+      position: relative; overflow: hidden;
       transition: all 0.15s ease;
     }
-
     .btn::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: currentColor;
-      opacity: 0;
-      transition: opacity 0.15s ease;
+      content: ''; position: absolute; inset: 0;
+      background: currentColor; opacity: 0; transition: opacity 0.15s ease;
     }
-
-    .btn:hover::before { opacity: 0.1; }
+    .btn:hover::before  { opacity: 0.1; }
     .btn:active::before { opacity: 0.25; }
-
     .btn-primary {
-      color: var(--neon-cyan);
-      border-color: var(--neon-cyan);
+      color: var(--neon-cyan); border-color: var(--neon-cyan);
       box-shadow: 0 0 8px rgba(0,245,255,0.4);
     }
-
-    .btn-primary:hover {
-      box-shadow: 0 0 16px rgba(0,245,255,0.6), 0 0 32px rgba(0,245,255,0.2);
-    }
-
+    .btn-primary:hover { box-shadow: 0 0 16px rgba(0,245,255,0.6), 0 0 32px rgba(0,245,255,0.2); }
     .btn-success {
-      color: var(--neon-green);
-      border-color: var(--neon-green);
+      color: var(--neon-green); border-color: var(--neon-green);
       box-shadow: 0 0 8px rgba(0,255,136,0.4);
     }
+    .btn-success:hover { box-shadow: 0 0 16px rgba(0,255,136,0.6), 0 0 32px rgba(0,255,136,0.2); }
 
-    .btn-success:hover {
-      box-shadow: 0 0 16px rgba(0,255,136,0.6), 0 0 32px rgba(0,255,136,0.2);
-    }
-
-    /* ========== CORNER DECORATIONS ========== */
-    #canvasWrapper::before,
-    #canvasWrapper::after {
-      content: '';
-      position: absolute;
-      width: 12px;
-      height: 12px;
-      border-color: var(--neon-cyan);
-      border-style: solid;
-      z-index: 2;
-      pointer-events: none;
-    }
-
-    #canvasWrapper::before {
-      top: 0; left: 0;
-      border-width: 2px 0 0 2px;
-    }
-
-    #canvasWrapper::after {
-      bottom: 0; right: 0;
-      border-width: 0 2px 2px 0;
-    }
-
-    /* ========== ANIMATIONS ========== */
     @keyframes flicker {
       0%, 95%, 100% { opacity: 1; }
-      96% { opacity: 0.8; }
-      97% { opacity: 1; }
-      98% { opacity: 0.6; }
-      99% { opacity: 1; }
+      96% { opacity: 0.8; } 97% { opacity: 1; } 98% { opacity: 0.6; } 99% { opacity: 1; }
     }
-
     @keyframes pulse-glow {
       from { text-shadow: 0 0 10px var(--neon-green), 0 0 30px var(--neon-green); }
       to   { text-shadow: 0 0 20px var(--neon-green), 0 0 60px var(--neon-green), 0 0 80px rgba(0,255,136,0.4); }
     }
-
-    /* ========== RESPONSIVE ========== */
-    @media (max-height: 600px) {
-      .game-logo    { font-size: 32px; }
-      .goal-title   { font-size: 24px; }
-      .overlay      { gap: 12px; }
-    }
-
-    @media (min-width: 420px) {
-      #canvasWrapper { aspect-ratio: 1 / 1.1; }
-    }
+    @media (max-height: 600px) { .game-logo { font-size: 32px; } .goal-title { font-size: 24px; } .overlay { gap: 12px; } }
+    @media (min-width: 420px) { #canvasWrapper { aspect-ratio: 1 / 1.1; } }
   </style>
 </head>
 <body>
 
-  <!-- ========== START SCREEN ========== -->
+  <!-- START SCREEN -->
   <div id="startScreen" class="overlay">
     <div class="game-logo">MAZE</div>
     <div class="game-subtitle">// TILT NAVIGATOR //</div>
@@ -374,29 +186,31 @@
       <span>DESKTOP</span> — arrow keys / WASD<br>
       reach the <span>GOAL</span> as fast as you can
     </div>
-    <button class="btn btn-primary" id="startBtn" onclick="initGame()">[ START ]</button>
+    <button class="btn btn-primary" onclick="startGame()">[ START ]</button>
   </div>
 
-  <!-- ========== GOAL SCREEN ========== -->
+  <!-- GOAL SCREEN -->
   <div id="goalScreen" class="overlay hidden">
     <div class="goal-title">// CLEAR //</div>
     <div class="goal-stats">
       <div class="goal-stat">
         <span class="goal-stat-label">time</span>
-        <span class="goal-stat-value" id="goalTimeValue">00:00</span>
+        <span class="goal-stat-value" id="goalTimeValue">0.0s</span>
+      </div>
+      <div class="goal-stat">
+        <span class="goal-stat-label">stage</span>
+        <span class="goal-stat-value" id="goalStageValue">1</span>
       </div>
       <div class="goal-stat">
         <span class="goal-stat-label">score</span>
         <span class="goal-stat-value" id="goalScoreValue">0</span>
       </div>
     </div>
-    <button class="btn btn-success" id="nextBtn" onclick="nextStage()">[ NEXT STAGE ]</button>
+    <button class="btn btn-success" onclick="continueNextStage()">[ NEXT STAGE ]</button>
   </div>
 
-  <!-- ========== GAME UI ========== -->
+  <!-- GAME UI -->
   <div id="app">
-
-    <!-- HUD -->
     <div id="hud">
       <div class="hud-item">
         <span class="hud-label">score</span>
@@ -404,141 +218,404 @@
       </div>
       <div class="hud-item">
         <span class="hud-label">time</span>
-        <span class="hud-value" id="timerDisplay">00:00</span>
+        <span class="hud-value" id="timerDisplay">0.0s</span>
       </div>
       <div class="hud-item">
         <span class="hud-label">stage</span>
         <span class="hud-value" id="stageDisplay">1</span>
       </div>
     </div>
-
-    <!-- Canvas -->
     <div id="canvasWrapper">
       <canvas id="mazeCanvas"></canvas>
     </div>
-
-    <!-- Stage info bar -->
     <div id="stageInfo">
       stage <span id="stageInfoText">01</span> &mdash; find the exit
     </div>
-
   </div>
 
   <script>
-    // ============================================================
-    // GAME STATE
-    // ============================================================
-    const canvas = document.getElementById('mazeCanvas');
-    const ctx    = canvas.getContext('2d');
+  // ================================================================
+  // MAZE GENERATION  (worker2 — integrated by boss1)
+  // ================================================================
 
-    let gameState = {
-      stage:     1,
-      score:     0,
-      running:   false,
-      maze:      null,
-      ball:      { x: 0, y: 0, vx: 0, vy: 0, radius: 0 },
-      tilt:      { x: 0, y: 0 },
-      timerInterval: null,
-      elapsedMs: 0,
-    };
+  function generateMaze(cols, rows) {
+    const maze = [];
+    for (let r = 0; r < rows; r++) {
+      maze[r] = [];
+      for (let c = 0; c < cols; c++) {
+        maze[r][c] = { top: true, right: true, bottom: true, left: true, isGoal: false };
+      }
+    }
+    maze[rows - 1][cols - 1].isGoal = true;
 
-    // ============================================================
-    // SKELETON FUNCTIONS (to be implemented by worker2 / worker3)
-    // ============================================================
+    const visited = Array.from({ length: rows }, () => new Array(cols).fill(false));
+    const dirs = [
+      { dr: -1, dc:  0, wall: 'top',    opp: 'bottom' },
+      { dr:  1, dc:  0, wall: 'bottom', opp: 'top'    },
+      { dr:  0, dc:  1, wall: 'right',  opp: 'left'   },
+      { dr:  0, dc: -1, wall: 'left',   opp: 'right'  },
+    ];
 
-    /**
-     * Initialize / restart the game for the current stage.
-     * Sets up canvas size, generates maze, places ball, starts timer.
-     */
-    function initGame() { /* worker1: bootstrap only */ }
-
-    /**
-     * Generate a maze using recursive backtracker (or similar).
-     * @param {number} cols
-     * @param {number} rows
-     * @returns {object} maze data structure
-     */
-    function generateMaze(cols, rows) { /* worker2 implements */ }
-
-    /**
-     * Draw the maze walls onto the canvas context.
-     * @param {CanvasRenderingContext2D} ctx
-     * @param {object} maze
-     */
-    function drawMaze(ctx, maze) { /* worker2 implements */ }
-
-    /**
-     * Draw the player ball onto the canvas.
-     * @param {CanvasRenderingContext2D} ctx
-     * @param {object} ball  {x, y, radius}
-     */
-    function drawBall(ctx, ball) { /* worker2 implements */ }
-
-    /**
-     * Update ball position and velocity based on device/key tilt.
-     * Handles wall collision detection.
-     * @param {object} ball
-     * @param {number} tiltX  - lateral tilt (negative=left, positive=right)
-     * @param {number} tiltY  - forward tilt (negative=up,   positive=down)
-     */
-    function updateBall(ball, tiltX, tiltY) { /* worker3 implements */ }
-
-    /**
-     * Handle DeviceOrientationEvent from smartphone gyroscope.
-     * Converts gamma/beta angles to tiltX/tiltY.
-     * @param {DeviceOrientationEvent} event
-     */
-    function handleDeviceOrientation(event) { /* worker3 implements */ }
-
-    /**
-     * Handle keyboard arrow / WASD input for desktop play.
-     * @param {KeyboardEvent} event
-     */
-    function handleKeyDown(event) { /* worker3 implements */ }
-
-    /**
-     * Start the elapsed-time counter and update the HUD.
-     */
-    function startTimer() { /* worker3 implements */ }
-
-    /**
-     * Pause / stop the timer.
-     */
-    function stopTimer() { /* worker3 implements */ }
-
-    /**
-     * Refresh the timer display in the HUD (called every ~100ms).
-     */
-    function updateTimer() { /* worker3 implements */ }
-
-    /**
-     * Check whether the ball has reached the goal cell.
-     * @param {object} ball
-     * @param {object} maze
-     * @returns {boolean}
-     */
-    function checkGoal(ball, maze) { /* worker3 implements */ return false; }
-
-    /**
-     * Advance to the next stage: increment counter, re-init maze.
-     */
-    function nextStage() { /* worker3 implements */ }
-
-    // ============================================================
-    // BOOTSTRAP — resize canvas to match wrapper pixel dimensions
-    // ============================================================
-    function resizeCanvas() {
-      const wrapper = document.getElementById('canvasWrapper');
-      canvas.width  = wrapper.clientWidth;
-      canvas.height = wrapper.clientHeight;
+    function shuffle(a) {
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
     }
 
-    window.addEventListener('resize', resizeCanvas);
-    resizeCanvas();
+    function carve(r, c) {
+      visited[r][c] = true;
+      for (const { dr, dc, wall, opp } of shuffle([...dirs])) {
+        const nr = r + dr, nc = c + dc;
+        if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && !visited[nr][nc]) {
+          maze[r][c][wall] = false;
+          maze[nr][nc][opp] = false;
+          carve(nr, nc);
+        }
+      }
+    }
+    carve(0, 0);
+    return maze;
+  }
 
-    // Event listeners (implementations provided by worker3)
-    window.addEventListener('deviceorientation', handleDeviceOrientation);
-    window.addEventListener('keydown', handleKeyDown);
+  function drawMaze(ctx, maze, cellSize, offsetX, offsetY) {
+    const rows = maze.length, cols = maze[0].length;
+    ctx.save();
+
+    // Goal cell
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        if (maze[r][c].isGoal) {
+          ctx.fillStyle = '#00ff88';
+          ctx.shadowColor = '#00ff88';
+          ctx.shadowBlur = 18;
+          ctx.fillRect(offsetX + c * cellSize + 2, offsetY + r * cellSize + 2, cellSize - 4, cellSize - 4);
+          ctx.shadowBlur = 0;
+          ctx.fillStyle = '#003322';
+          ctx.font = `bold ${Math.max(8, Math.floor(cellSize * 0.32))}px monospace`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('GOAL', offsetX + c * cellSize + cellSize / 2, offsetY + r * cellSize + cellSize / 2);
+        }
+      }
+    }
+
+    // Start cell
+    ctx.fillStyle = 'rgba(255,255,0,0.12)';
+    ctx.fillRect(offsetX, offsetY, cellSize, cellSize);
+
+    // Inner walls
+    ctx.strokeStyle = '#00ffff';
+    ctx.lineWidth = 2;
+    ctx.shadowColor = '#00ffff';
+    ctx.shadowBlur = 6;
+    ctx.lineCap = 'round';
+
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const x = offsetX + c * cellSize, y = offsetY + r * cellSize;
+        const cell = maze[r][c];
+        ctx.beginPath();
+        if (cell.top    && r > 0)        { ctx.moveTo(x,            y);           ctx.lineTo(x + cellSize, y); }
+        if (cell.right  && c < cols - 1) { ctx.moveTo(x + cellSize, y);           ctx.lineTo(x + cellSize, y + cellSize); }
+        if (cell.bottom && r < rows - 1) { ctx.moveTo(x,            y + cellSize); ctx.lineTo(x + cellSize, y + cellSize); }
+        if (cell.left   && c > 0)        { ctx.moveTo(x,            y);           ctx.lineTo(x,            y + cellSize); }
+        ctx.stroke();
+      }
+    }
+
+    // Outer border
+    ctx.strokeStyle = '#00ffff';
+    ctx.lineWidth = 3;
+    ctx.shadowBlur = 10;
+    const tw = cols * cellSize, th = rows * cellSize;
+    ctx.beginPath();
+    ctx.moveTo(offsetX,      offsetY);       ctx.lineTo(offsetX + tw, offsetY);
+    ctx.moveTo(offsetX + tw, offsetY);       ctx.lineTo(offsetX + tw, offsetY + th);
+    ctx.moveTo(offsetX,      offsetY + th);  ctx.lineTo(offsetX + tw, offsetY + th);
+    ctx.moveTo(offsetX,      offsetY);       ctx.lineTo(offsetX,      offsetY + th);
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  function drawBall(ctx, x, y, radius) {
+    ctx.save();
+    ctx.shadowColor = '#ff00ff';
+    ctx.shadowBlur = 20;
+    const g = ctx.createRadialGradient(x - radius * 0.3, y - radius * 0.3, radius * 0.1, x, y, radius);
+    g.addColorStop(0, '#ff88ff');
+    g.addColorStop(0.5, '#ff00ff');
+    g.addColorStop(1, '#880044');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    const s = ctx.createRadialGradient(x - radius * 0.35, y - radius * 0.35, 0, x - radius * 0.35, y - radius * 0.35, radius * 0.5);
+    s.addColorStop(0, 'rgba(255,255,255,0.7)');
+    s.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = s;
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // ================================================================
+  // GAME ENGINE  (worker3 — integrated & fixed by boss1)
+  // ================================================================
+
+  const GameEngine = (() => {
+    let tiltX = 0, tiltY = 0;
+    let timerStart = null, timerElapsed = 0, timerRunning = false;
+    let currentStage = 1, totalScore = 0;
+    let animFrameId = null;
+    const keysDown = new Set();
+
+    // ---- Ball physics ----
+    function updateBall(ball, tx, ty, maze, cellSize, offsetX, offsetY) {
+      ball.vx += tx * 0.3;
+      ball.vy += ty * 0.3;
+      ball.vx *= 0.98;
+      ball.vy *= 0.98;
+      const MAX_SPD = cellSize * 0.4;
+      const spd = Math.hypot(ball.vx, ball.vy);
+      if (spd > MAX_SPD) { ball.vx = ball.vx / spd * MAX_SPD; ball.vy = ball.vy / spd * MAX_SPD; }
+      for (let s = 0; s < 3; s++) {
+        ball.x += ball.vx / 3;
+        ball = resolveX(ball, maze, cellSize, offsetX, offsetY);
+        ball.y += ball.vy / 3;
+        ball = resolveY(ball, maze, cellSize, offsetX, offsetY);
+      }
+      return ball;
+    }
+
+    function resolveX(ball, maze, cellSize, ox, oy) {
+      const rows = maze.length, cols = maze[0].length;
+      const probes = [
+        [-ball.radius, 0], [ball.radius, 0],
+        [-ball.radius, -ball.radius * 0.6], [ball.radius, -ball.radius * 0.6],
+        [-ball.radius,  ball.radius * 0.6], [ball.radius,  ball.radius * 0.6],
+      ];
+      for (const [dx, dy] of probes) {
+        const col = Math.floor((ball.x + dx - ox) / cellSize);
+        const row = Math.floor((ball.y + dy - oy) / cellSize);
+        if (row < 0 || row >= rows || col < 0 || col >= cols) continue;
+        const cell = maze[row][col];
+        const cL = ox + col * cellSize, cR = cL + cellSize;
+        if (cell.left  && dx < 0 && ball.x - ball.radius < cL) { ball.x = cL + ball.radius; ball.vx = 0; }
+        if (cell.right && dx > 0 && ball.x + ball.radius > cR) { ball.x = cR - ball.radius; ball.vx = 0; }
+      }
+      if (ball.x < ox + ball.radius)              { ball.x = ox + ball.radius; ball.vx = 0; }
+      if (ball.x > ox + cols * cellSize - ball.radius) { ball.x = ox + cols * cellSize - ball.radius; ball.vx = 0; }
+      return ball;
+    }
+
+    function resolveY(ball, maze, cellSize, ox, oy) {
+      const rows = maze.length, cols = maze[0].length;
+      const probes = [
+        [0, -ball.radius], [0, ball.radius],
+        [-ball.radius * 0.6, -ball.radius], [ball.radius * 0.6, -ball.radius],
+        [-ball.radius * 0.6,  ball.radius], [ball.radius * 0.6,  ball.radius],
+      ];
+      for (const [dx, dy] of probes) {
+        const col = Math.floor((ball.x + dx - ox) / cellSize);
+        const row = Math.floor((ball.y + dy - oy) / cellSize);
+        if (row < 0 || row >= rows || col < 0 || col >= cols) continue;
+        const cell = maze[row][col];
+        const cT = oy + row * cellSize, cB = cT + cellSize;
+        if (cell.top    && dy < 0 && ball.y - ball.radius < cT) { ball.y = cT + ball.radius; ball.vy = 0; }
+        if (cell.bottom && dy > 0 && ball.y + ball.radius > cB) { ball.y = cB - ball.radius; ball.vy = 0; }
+      }
+      if (ball.y < oy + ball.radius)               { ball.y = oy + ball.radius; ball.vy = 0; }
+      if (ball.y > oy + rows * cellSize - ball.radius) { ball.y = oy + rows * cellSize - ball.radius; ball.vy = 0; }
+      return ball;
+    }
+
+    // ---- Input ----
+    function handleDeviceOrientation(e) {
+      tiltX = clamp(e.gamma ?? 0, -90, 90);
+      tiltY = clamp(e.beta  ?? 0, -90, 90);
+    }
+
+    function handleKeyDown(e) {
+      keysDown.add(e.key);
+      applyKeyTilt();
+      if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) e.preventDefault();
+    }
+
+    function handleKeyUp(e) { keysDown.delete(e.key); applyKeyTilt(); }
+
+    function applyKeyTilt() {
+      const T = 20;
+      let tx = 0, ty = 0;
+      if (keysDown.has('ArrowLeft')  || keysDown.has('a') || keysDown.has('A')) tx -= T;
+      if (keysDown.has('ArrowRight') || keysDown.has('d') || keysDown.has('D')) tx += T;
+      if (keysDown.has('ArrowUp')    || keysDown.has('w') || keysDown.has('W')) ty -= T;
+      if (keysDown.has('ArrowDown')  || keysDown.has('s') || keysDown.has('S')) ty += T;
+      tiltX = tx; tiltY = ty;
+    }
+
+    async function requestPermission() {
+      if (typeof DeviceOrientationEvent !== 'undefined' &&
+          typeof DeviceOrientationEvent.requestPermission === 'function') {
+        try { return (await DeviceOrientationEvent.requestPermission()) === 'granted'; }
+        catch { return false; }
+      }
+      return true;
+    }
+
+    // ---- Timer ----
+    function startTimer() { timerStart = Date.now(); timerRunning = true; timerElapsed = 0; }
+
+    function stopTimer() {
+      if (!timerRunning) return timerElapsed;
+      timerElapsed = (Date.now() - timerStart) / 1000;
+      timerRunning = false;
+      return parseFloat(timerElapsed.toFixed(1));
+    }
+
+    function updateTimer() {
+      const el = document.getElementById('timerDisplay');
+      if (!el) return;
+      const t = timerRunning ? (Date.now() - timerStart) / 1000 : timerElapsed;
+      el.textContent = t.toFixed(1) + 's';
+    }
+
+    // ---- Goal ----
+    function checkGoal(ball, maze, cellSize, ox, oy) {
+      const rows = maze.length, cols = maze[0].length;
+      const gcx = ox + (cols - 1) * cellSize + cellSize / 2;
+      const gcy = oy + (rows - 1) * cellSize + cellSize / 2;
+      return Math.hypot(ball.x - gcx, ball.y - gcy) < cellSize * 0.35;
+    }
+
+    // ---- Game loop ----
+    function gameLoop() {
+      const g = window.__mazeGame;
+      if (!g || g.paused) return;
+      const { ctx, canvas, maze, cellSize, offsetX, offsetY } = g;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawMaze(ctx, maze, cellSize, offsetX, offsetY);
+      g.ball = updateBall(g.ball, tiltX, tiltY, maze, cellSize, offsetX, offsetY);
+      drawBall(ctx, g.ball.x, g.ball.y, g.ball.radius);
+      updateTimer();
+
+      if (checkGoal(g.ball, maze, cellSize, offsetX, offsetY)) {
+        const elapsed = stopTimer();
+        const stageScore = Math.max(100, Math.floor(10000 / (elapsed + 1) * currentStage));
+        totalScore += stageScore;
+        g.paused = true;
+        showGoalScreen(elapsed, currentStage, totalScore);
+        return;
+      }
+
+      animFrameId = requestAnimationFrame(gameLoop);
+    }
+
+    // ---- Stage management ----
+    function startStage(rows, cols, stage) {
+      const g = window.__mazeGame;
+      const canvas = g.canvas;
+      const margin = 20;
+      const cw = Math.floor((canvas.width  - margin * 2) / cols);
+      const ch = Math.floor((canvas.height - margin * 2) / rows);
+      g.cellSize = Math.max(Math.min(cw, ch), 8);
+      g.offsetX  = Math.floor((canvas.width  - g.cellSize * cols) / 2);
+      g.offsetY  = Math.floor((canvas.height - g.cellSize * rows) / 2);
+      g.maze     = generateMaze(cols, rows);
+      g.ball     = {
+        x: g.offsetX + g.cellSize / 2,
+        y: g.offsetY + g.cellSize / 2,
+        vx: 0, vy: 0,
+        radius: Math.max(Math.floor(g.cellSize * 0.25), 4),
+      };
+      g.paused = false;
+      currentStage = stage;
+
+      document.getElementById('stageDisplay').textContent  = stage;
+      document.getElementById('stageInfoText').textContent = String(stage).padStart(2, '0');
+      document.getElementById('scoreDisplay').textContent  = totalScore;
+
+      startTimer();
+      if (animFrameId) cancelAnimationFrame(animFrameId);
+      animFrameId = requestAnimationFrame(gameLoop);
+    }
+
+    function initGame() {
+      const canvas = document.getElementById('mazeCanvas');
+      if (!canvas) return;
+      resizeCanvas();
+      window.__mazeGame = { canvas, ctx: canvas.getContext('2d') };
+      window.addEventListener('deviceorientation', handleDeviceOrientation);
+      window.addEventListener('keydown', handleKeyDown);
+      window.addEventListener('keyup',   handleKeyUp);
+      requestPermission();
+      totalScore = 0;
+      currentStage = 1;
+      startStage(10, 8, 1);
+    }
+
+    function advanceNextStage() {
+      const BASE_C = 8, BASE_R = 10, INC = 2, MAX_C = 20, MAX_R = 24;
+      const next = currentStage + 1;
+      const d = next - 1;
+      startStage(
+        Math.min(BASE_R + d * INC, MAX_R),
+        Math.min(BASE_C + d * INC, MAX_C),
+        next
+      );
+    }
+
+    function clamp(v, mn, mx) { return Math.max(mn, Math.min(mx, v)); }
+
+    return { initGame, advanceNextStage };
+  })();
+
+  // ================================================================
+  // UI GLUE
+  // ================================================================
+
+  const canvas = document.getElementById('mazeCanvas');
+
+  function resizeCanvas() {
+    const w = document.getElementById('canvasWrapper');
+    canvas.width  = w.clientWidth;
+    canvas.height = w.clientHeight;
+  }
+
+  window.addEventListener('resize', () => {
+    resizeCanvas();
+    const g = window.__mazeGame;
+    if (g && g.maze) {
+      const rows = g.maze.length, cols = g.maze[0].length;
+      g.canvas.width  = canvas.width;
+      g.canvas.height = canvas.height;
+      window.__mazeGame.startStage && window.__mazeGame.startStage(rows, cols,
+        parseInt(document.getElementById('stageDisplay').textContent) || 1);
+    }
+  });
+
+  function startGame() {
+    document.getElementById('startScreen').classList.add('hidden');
+    GameEngine.initGame();
+  }
+
+  function showGoalScreen(elapsed, stage, score) {
+    document.getElementById('goalTimeValue').textContent  = elapsed.toFixed(1) + 's';
+    document.getElementById('goalStageValue').textContent = stage;
+    document.getElementById('goalScoreValue').textContent = score;
+    document.getElementById('goalScreen').classList.remove('hidden');
+  }
+
+  function continueNextStage() {
+    document.getElementById('goalScreen').classList.add('hidden');
+    resizeCanvas();
+    GameEngine.advanceNextStage();
+  }
   </script>
 </body>
 </html>
