@@ -415,22 +415,38 @@
 
     function resolveY(ball, maze, cellSize, ox, oy) {
       const rows = maze.length, cols = maze[0].length;
-      const probes = [
-        [0, -ball.radius], [0, ball.radius],
-        [-ball.radius * 0.6, -ball.radius], [ball.radius * 0.6, -ball.radius],
-        [-ball.radius * 0.6,  ball.radius], [ball.radius * 0.6,  ball.radius],
-      ];
-      for (const [dx, dy] of probes) {
-        const col = Math.floor((ball.x + dx - ox) / cellSize);
-        const row = Math.floor((ball.y + dy - oy) / cellSize);
-        if (row < 0 || row >= rows || col < 0 || col >= cols) continue;
-        const cell = maze[row][col];
-        const cT = oy + row * cellSize, cB = cT + cellSize;
-        if (cell.top    && dy < 0 && ball.y - ball.radius < cT) { ball.y = cT + ball.radius; ball.vy = 0; }
-        if (cell.bottom && dy > 0 && ball.y + ball.radius > cB) { ball.y = cB - ball.radius; ball.vy = 0; }
+
+      // 迷路外枠クランプ
+      if (ball.y - ball.radius < oy) { ball.y = oy + ball.radius; ball.vy = 0; }
+      if (ball.y + ball.radius > oy + rows * cellSize) {
+        ball.y = oy + rows * cellSize - ball.radius; ball.vy = 0;
       }
-      if (ball.y < oy + ball.radius)               { ball.y = oy + ball.radius; ball.vy = 0; }
-      if (ball.y > oy + rows * cellSize - ball.radius) { ball.y = oy + rows * cellSize - ball.radius; ball.vy = 0; }
+
+      // ボールの横方向に3点サンプリングしてコーナー処理
+      const sampleXs = [ball.x - ball.radius * 0.7, ball.x, ball.x + ball.radius * 0.7];
+      for (const sx of sampleXs) {
+        const col = Math.floor((sx - ox) / cellSize);
+        if (col < 0 || col >= cols) continue;
+
+        // ボール中心のY座標でセル行を特定（←これが重要な修正点）
+        const row = Math.floor((ball.y - oy) / cellSize);
+        if (row < 0 || row >= rows) continue;
+
+        const cell = maze[row][col];
+        const cT = oy + row * cellSize;
+        const cB = cT + cellSize;
+
+        // 現在セルの上壁：ボール上端がセル上端より上に出たらpush back
+        if (cell.top && ball.y - ball.radius < cT) {
+          ball.y = cT + ball.radius;
+          ball.vy = 0;
+        }
+        // 現在セルの下壁：ボール下端がセル下端より下に出たらpush back
+        if (cell.bottom && ball.y + ball.radius > cB) {
+          ball.y = cB - ball.radius;
+          ball.vy = 0;
+        }
+      }
       return ball;
     }
 
