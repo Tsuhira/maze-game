@@ -380,13 +380,13 @@
       ball.vy += ty * 0.3;
       ball.vx *= 0.98;
       ball.vy *= 0.98;
-      const MAX_SPD = cellSize * 0.4;
+      const MAX_SPD = cellSize * 0.3;   // 速度上限を下げてトンネリング防止
       const spd = Math.hypot(ball.vx, ball.vy);
       if (spd > MAX_SPD) { ball.vx = ball.vx / spd * MAX_SPD; ball.vy = ball.vy / spd * MAX_SPD; }
-      for (let s = 0; s < 3; s++) {
-        ball.x += ball.vx / 3;
+      for (let s = 0; s < 5; s++) {     // サブステップを3→5に増やして精度向上
+        ball.x += ball.vx / 5;
         ball = resolveX(ball, maze, cellSize, offsetX, offsetY);
-        ball.y += ball.vy / 3;
+        ball.y += ball.vy / 5;
         ball = resolveY(ball, maze, cellSize, offsetX, offsetY);
       }
       return ball;
