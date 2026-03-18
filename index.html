@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>MAZE // TILT</title>
+  <style>
+    /* ========== RESET & BASE ========== */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --neon-cyan:    #00f5ff;
+      --neon-magenta: #ff00c8;
+      --neon-green:   #00ff88;
+      --neon-yellow:  #ffee00;
+      --bg-dark:      #0a0a14;
+      --bg-panel:     #0d0d20;
+      --border-glow:  #1a1a3e;
+      --text-dim:     #4a4a7a;
+      --wall-color:   #1e3a5f;
+      --wall-glow:    #00f5ff33;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: var(--bg-dark);
+      color: var(--neon-cyan);
+      font-family: 'Courier New', Courier, monospace;
+    }
+
+    /* ========== SCANLINE EFFECT ========== */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0, 0, 0, 0.08) 2px,
+        rgba(0, 0, 0, 0.08) 4px
+      );
+      pointer-events: none;
+      z-index: 9999;
+    }
+
+    /* ========== MAIN LAYOUT ========== */
+    #app {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+      padding: 8px;
+    }
+
+    /* ========== HUD ========== */
+    #hud {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+      max-width: 400px;
+      padding: 6px 12px;
+      margin-bottom: 6px;
+      background: var(--bg-panel);
+      border: 1px solid var(--border-glow);
+      border-bottom: none;
+      border-radius: 4px 4px 0 0;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #hud::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, transparent, rgba(0,245,255,0.03), transparent);
+    }
+
+    .hud-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1px;
+    }
+
+    .hud-label {
+      font-size: 9px;
+      letter-spacing: 2px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+    }
+
+    .hud-value {
+      font-size: 18px;
+      font-weight: bold;
+      letter-spacing: 1px;
+      text-shadow: 0 0 8px currentColor;
+    }
+
+    #scoreDisplay  { color: var(--neon-yellow); }
+    #timerDisplay  { color: var(--neon-cyan);   font-size: 22px; }
+    #stageDisplay  { color: var(--neon-magenta); }
+
+    /* ========== CANVAS WRAPPER ========== */
+    #canvasWrapper {
+      position: relative;
+      width: 100%;
+      max-width: 400px;
+      aspect-ratio: 1 / 1;
+      border: 1px solid var(--neon-cyan);
+      box-shadow:
+        0 0 10px var(--neon-cyan),
+        0 0 30px rgba(0,245,255,0.2),
+        inset 0 0 20px rgba(0,245,255,0.05);
+      border-radius: 0 0 4px 4px;
+      overflow: hidden;
+      background: var(--bg-dark);
+    }
+
+    #mazeCanvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* ========== STAGE INFO BAR ========== */
+    #stageInfo {
+      width: 100%;
+      max-width: 400px;
+      margin-top: 6px;
+      padding: 4px 12px;
+      background: var(--bg-panel);
+      border: 1px solid var(--border-glow);
+      border-radius: 4px;
+      font-size: 10px;
+      letter-spacing: 2px;
+      color: var(--text-dim);
+      text-align: center;
+      text-transform: uppercase;
+    }
+
+    #stageInfo span {
+      color: var(--neon-green);
+      text-shadow: 0 0 6px var(--neon-green);
+    }
+
+    /* ========== OVERLAY BASE ========== */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      background: rgba(10, 10, 20, 0.92);
+      backdrop-filter: blur(4px);
+      z-index: 100;
+      padding: 24px;
+      text-align: center;
+    }
+
+    .overlay.hidden {
+      display: none;
+    }
+
+    /* ========== START SCREEN ========== */
+    #startScreen {
+      background: rgba(10, 10, 20, 0.95);
+    }
+
+    .game-logo {
+      font-size: 48px;
+      font-weight: bold;
+      letter-spacing: 8px;
+      color: var(--neon-cyan);
+      text-shadow:
+        0 0 10px var(--neon-cyan),
+        0 0 30px var(--neon-cyan),
+        0 0 60px rgba(0,245,255,0.5);
+      animation: flicker 4s infinite;
+    }
+
+    .game-subtitle {
+      font-size: 13px;
+      letter-spacing: 4px;
+      color: var(--neon-magenta);
+      text-shadow: 0 0 8px var(--neon-magenta);
+      margin-top: -8px;
+    }
+
+    .divider {
+      width: 200px;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--neon-cyan), transparent);
+    }
+
+    .instructions {
+      font-size: 12px;
+      line-height: 2;
+      color: var(--text-dim);
+      letter-spacing: 1px;
+    }
+
+    .instructions span {
+      color: var(--neon-green);
+    }
+
+    /* ========== GOAL SCREEN ========== */
+    #goalScreen {
+      background: rgba(10, 20, 10, 0.95);
+    }
+
+    .goal-title {
+      font-size: 36px;
+      font-weight: bold;
+      letter-spacing: 6px;
+      color: var(--neon-green);
+      text-shadow:
+        0 0 10px var(--neon-green),
+        0 0 30px var(--neon-green),
+        0 0 60px rgba(0,255,136,0.5);
+      animation: pulse-glow 1s ease-in-out infinite alternate;
+    }
+
+    .goal-stats {
+      display: flex;
+      gap: 32px;
+      padding: 16px 24px;
+      border: 1px solid var(--neon-green);
+      border-radius: 4px;
+      box-shadow: 0 0 12px rgba(0,255,136,0.2);
+    }
+
+    .goal-stat {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .goal-stat-label {
+      font-size: 9px;
+      letter-spacing: 2px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+    }
+
+    .goal-stat-value {
+      font-size: 24px;
+      font-weight: bold;
+      text-shadow: 0 0 8px currentColor;
+    }
+
+    #goalTimeValue  { color: var(--neon-cyan); }
+    #goalScoreValue { color: var(--neon-yellow); }
+
+    /* ========== BUTTONS ========== */
+    .btn {
+      padding: 12px 32px;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 14px;
+      font-weight: bold;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      border: 2px solid;
+      border-radius: 2px;
+      background: transparent;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.15s ease;
+    }
+
+    .btn::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: currentColor;
+      opacity: 0;
+      transition: opacity 0.15s ease;
+    }
+
+    .btn:hover::before { opacity: 0.1; }
+    .btn:active::before { opacity: 0.25; }
+
+    .btn-primary {
+      color: var(--neon-cyan);
+      border-color: var(--neon-cyan);
+      box-shadow: 0 0 8px rgba(0,245,255,0.4);
+    }
+
+    .btn-primary:hover {
+      box-shadow: 0 0 16px rgba(0,245,255,0.6), 0 0 32px rgba(0,245,255,0.2);
+    }
+
+    .btn-success {
+      color: var(--neon-green);
+      border-color: var(--neon-green);
+      box-shadow: 0 0 8px rgba(0,255,136,0.4);
+    }
+
+    .btn-success:hover {
+      box-shadow: 0 0 16px rgba(0,255,136,0.6), 0 0 32px rgba(0,255,136,0.2);
+    }
+
+    /* ========== CORNER DECORATIONS ========== */
+    #canvasWrapper::before,
+    #canvasWrapper::after {
+      content: '';
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      border-color: var(--neon-cyan);
+      border-style: solid;
+      z-index: 2;
+      pointer-events: none;
+    }
+
+    #canvasWrapper::before {
+      top: 0; left: 0;
+      border-width: 2px 0 0 2px;
+    }
+
+    #canvasWrapper::after {
+      bottom: 0; right: 0;
+      border-width: 0 2px 2px 0;
+    }
+
+    /* ========== ANIMATIONS ========== */
+    @keyframes flicker {
+      0%, 95%, 100% { opacity: 1; }
+      96% { opacity: 0.8; }
+      97% { opacity: 1; }
+      98% { opacity: 0.6; }
+      99% { opacity: 1; }
+    }
+
+    @keyframes pulse-glow {
+      from { text-shadow: 0 0 10px var(--neon-green), 0 0 30px var(--neon-green); }
+      to   { text-shadow: 0 0 20px var(--neon-green), 0 0 60px var(--neon-green), 0 0 80px rgba(0,255,136,0.4); }
+    }
+
+    /* ========== RESPONSIVE ========== */
+    @media (max-height: 600px) {
+      .game-logo    { font-size: 32px; }
+      .goal-title   { font-size: 24px; }
+      .overlay      { gap: 12px; }
+    }
+
+    @media (min-width: 420px) {
+      #canvasWrapper { aspect-ratio: 1 / 1.1; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ========== START SCREEN ========== -->
+  <div id="startScreen" class="overlay">
+    <div class="game-logo">MAZE</div>
+    <div class="game-subtitle">// TILT NAVIGATOR //</div>
+    <div class="divider"></div>
+    <div class="instructions">
+      <span>MOBILE</span> — tilt your device<br>
+      <span>DESKTOP</span> — arrow keys / WASD<br>
+      reach the <span>GOAL</span> as fast as you can
+    </div>
+    <button class="btn btn-primary" id="startBtn" onclick="initGame()">[ START ]</button>
+  </div>
+
+  <!-- ========== GOAL SCREEN ========== -->
+  <div id="goalScreen" class="overlay hidden">
+    <div class="goal-title">// CLEAR //</div>
+    <div class="goal-stats">
+      <div class="goal-stat">
+        <span class="goal-stat-label">time</span>
+        <span class="goal-stat-value" id="goalTimeValue">00:00</span>
+      </div>
+      <div class="goal-stat">
+        <span class="goal-stat-label">score</span>
+        <span class="goal-stat-value" id="goalScoreValue">0</span>
+      </div>
+    </div>
+    <button class="btn btn-success" id="nextBtn" onclick="nextStage()">[ NEXT STAGE ]</button>
+  </div>
+
+  <!-- ========== GAME UI ========== -->
+  <div id="app">
+
+    <!-- HUD -->
+    <div id="hud">
+      <div class="hud-item">
+        <span class="hud-label">score</span>
+        <span class="hud-value" id="scoreDisplay">0</span>
+      </div>
+      <div class="hud-item">
+        <span class="hud-label">time</span>
+        <span class="hud-value" id="timerDisplay">00:00</span>
+      </div>
+      <div class="hud-item">
+        <span class="hud-label">stage</span>
+        <span class="hud-value" id="stageDisplay">1</span>
+      </div>
+    </div>
+
+    <!-- Canvas -->
+    <div id="canvasWrapper">
+      <canvas id="mazeCanvas"></canvas>
+    </div>
+
+    <!-- Stage info bar -->
+    <div id="stageInfo">
+      stage <span id="stageInfoText">01</span> &mdash; find the exit
+    </div>
+
+  </div>
+
+  <script>
+    // ============================================================
+    // GAME STATE
+    // ============================================================
+    const canvas = document.getElementById('mazeCanvas');
+    const ctx    = canvas.getContext('2d');
+
+    let gameState = {
+      stage:     1,
+      score:     0,
+      running:   false,
+      maze:      null,
+      ball:      { x: 0, y: 0, vx: 0, vy: 0, radius: 0 },
+      tilt:      { x: 0, y: 0 },
+      timerInterval: null,
+      elapsedMs: 0,
+    };
+
+    // ============================================================
+    // SKELETON FUNCTIONS (to be implemented by worker2 / worker3)
+    // ============================================================
+
+    /**
+     * Initialize / restart the game for the current stage.
+     * Sets up canvas size, generates maze, places ball, starts timer.
+     */
+    function initGame() { /* worker1: bootstrap only */ }
+
+    /**
+     * Generate a maze using recursive backtracker (or similar).
+     * @param {number} cols
+     * @param {number} rows
+     * @returns {object} maze data structure
+     */
+    function generateMaze(cols, rows) { /* worker2 implements */ }
+
+    /**
+     * Draw the maze walls onto the canvas context.
+     * @param {CanvasRenderingContext2D} ctx
+     * @param {object} maze
+     */
+    function drawMaze(ctx, maze) { /* worker2 implements */ }
+
+    /**
+     * Draw the player ball onto the canvas.
+     * @param {CanvasRenderingContext2D} ctx
+     * @param {object} ball  {x, y, radius}
+     */
+    function drawBall(ctx, ball) { /* worker2 implements */ }
+
+    /**
+     * Update ball position and velocity based on device/key tilt.
+     * Handles wall collision detection.
+     * @param {object} ball
+     * @param {number} tiltX  - lateral tilt (negative=left, positive=right)
+     * @param {number} tiltY  - forward tilt (negative=up,   positive=down)
+     */
+    function updateBall(ball, tiltX, tiltY) { /* worker3 implements */ }
+
+    /**
+     * Handle DeviceOrientationEvent from smartphone gyroscope.
+     * Converts gamma/beta angles to tiltX/tiltY.
+     * @param {DeviceOrientationEvent} event
+     */
+    function handleDeviceOrientation(event) { /* worker3 implements */ }
+
+    /**
+     * Handle keyboard arrow / WASD input for desktop play.
+     * @param {KeyboardEvent} event
+     */
+    function handleKeyDown(event) { /* worker3 implements */ }
+
+    /**
+     * Start the elapsed-time counter and update the HUD.
+     */
+    function startTimer() { /* worker3 implements */ }
+
+    /**
+     * Pause / stop the timer.
+     */
+    function stopTimer() { /* worker3 implements */ }
+
+    /**
+     * Refresh the timer display in the HUD (called every ~100ms).
+     */
+    function updateTimer() { /* worker3 implements */ }
+
+    /**
+     * Check whether the ball has reached the goal cell.
+     * @param {object} ball
+     * @param {object} maze
+     * @returns {boolean}
+     */
+    function checkGoal(ball, maze) { /* worker3 implements */ return false; }
+
+    /**
+     * Advance to the next stage: increment counter, re-init maze.
+     */
+    function nextStage() { /* worker3 implements */ }
+
+    // ============================================================
+    // BOOTSTRAP — resize canvas to match wrapper pixel dimensions
+    // ============================================================
+    function resizeCanvas() {
+      const wrapper = document.getElementById('canvasWrapper');
+      canvas.width  = wrapper.clientWidth;
+      canvas.height = wrapper.clientHeight;
+    }
+
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    // Event listeners (implementations provided by worker3)
+    window.addEventListener('deviceorientation', handleDeviceOrientation);
+    window.addEventListener('keydown', handleKeyDown);
+  </script>
+</body>
+</html>
